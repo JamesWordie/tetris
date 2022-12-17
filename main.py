@@ -16,13 +16,26 @@ class Figure:
     This class defines a Figure object consisting of a list of figures,
     each of which is a list of four int's to fit a 4x4 grid.
     """
+    x=0
+    y = 0
+
+    # figures = [
+    #     [[1, 5, 9, 13], [4, 5, 6, 7]], # - Shape (2 orientations)
+    #     [[1, 2, 5, 9], [0, 4, 5, 6], [1, 5, 9, 8], [4, 5, 6, 10]], # L Shape (4 rotations)
+    #     [[1, 2, 6, 10], [5, 6, 7, 9], [2, 6, 10, 11], [3, 5, 6, 7]], # L Shape (4 rotations, flipped orientation from above)
+    #     [[1, 4, 5, 6], [1, 4, 5, 9], [4, 5, 6, 9], [1, 5, 6, 9]], # T Shape (4 orientations)
+    #     [[1, 2, 5, 6]], # Square Shape (single orientation)
+    #     [[4, 5, 9, 10], [2, 6, 5, 9]], # Z Shape (2 orientations)
+    #     [[6, 7, 9, 10], [1, 5, 6, 10]] # Z Shape (2 orientations)
+    # ]
     figures = [
-        [[1, 5, 9, 13], [4, 5, 6, 7]], # - Shape (2 orientations)
-        [[1, 2, 5, 9], [0, 4, 5, 6], [1, 5, 9, 8], [4, 5, 6, 10]], # L Shape (4 rotations)
-        [[1, 2, 6, 10], [5, 6, 7, 9], [2, 6, 10, 11], [3, 5, 6, 7]], # L Shape (4 rotations, flipped orientation from above)
-        [[1, 4, 5, 6], [1, 4, 5, 9], [4, 5, 6, 9], [1, 5, 6, 9]], # T Shape (4 orientations)
-        [[1, 2, 5, 6]], # Square Shape (single orientation)
-        [[4, 5, 9, 10], [1, 5, 4, 8]] # Z Shape (2 orientations)
+        [[1, 5, 9, 13], [4, 5, 6, 7]],
+        [[4, 5, 9, 10], [2, 6, 5, 9]],
+        [[6, 7, 9, 10], [1, 5, 6, 10]],
+        [[1, 2, 5, 9], [0, 4, 5, 6], [1, 5, 9, 8], [4, 5, 6, 10]],
+        [[1, 2, 6, 10], [5, 6, 7, 9], [2, 6, 10, 11], [3, 5, 6, 7]],
+        [[1, 4, 5, 6], [1, 4, 5, 9], [4, 5, 6, 9], [1, 5, 6, 9]],
+        [[1, 2, 5, 6]],
     ]
 
     def __init__(self, x, y):
@@ -54,7 +67,7 @@ class Tetris:
     width = 0
     x = 100
     y = 60
-    zoom = 2
+    zoom = 20
     figure = None
 
     def __init__(self, height, width):
@@ -68,6 +81,9 @@ class Tetris:
         """
         self.height = height
         self.width = width
+        self.field = []
+        self.score = 0
+        self.state = 'start'
         for _ in range(height):
             new_line=[]
             for _ in range(width):
@@ -77,7 +93,7 @@ class Tetris:
     def new_figure(self):
         """Set a new figure with coords (x,y) = (3,0)
         """
-        self.figure = Figure(3,0)
+        self.figure = Figure(3, 0)
 
     def intersects(self):
         """
@@ -91,9 +107,10 @@ class Tetris:
             for j in range(4):
                 if i * 4 + j in self.figure.image():
                     if i + self.figure.y > self.height - 1 or \
-                        j + self.figure.x > self.width - 1 or \
+                            j + self.figure.x > self.width - 1 or \
+                            j + self.figure.x < 0 or \
                             self.field[i + self.figure.y][j + self.figure.x] > 0:
-                                intersection = True
+                        intersection = True
         return intersection
 
     def freeze(self):
@@ -102,12 +119,11 @@ class Tetris:
         for i in range(4):
             for j in range(4):
                 if i * 4 + j in self.figure.image():
-                    self.field[i + self.figure.y][self.figure.x] = \
-                        self.figure.color
-                    self.break_lines()
-                    self.new_figure()
-                    if self.intersects():
-                        self.state = 'gameover'
+                    self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
+        self.break_lines()
+        self.new_figure()
+        if self.intersects():
+            self.state = "gameover"
 
     def break_lines(self):
         """Break any full lines, ie if full across the width
@@ -120,9 +136,9 @@ class Tetris:
                     zeros += 1
             if zeros == 0:
                 lines += 1
-                for il in range(i, 1, -1):
+                for i1 in range(i, 1, -1):
                     for j in range(self.width):
-                        self.field[il][j] = self.field[il -1][j]
+                        self.field[i1][j] = self.field[i1 - 1][j]
         self.score += lines ** 2
 
     def go_space(self):
@@ -166,7 +182,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GRAY = (128, 128, 128)
 
-size = (400,500)
+size = (400, 500)
 screen = pygame.display.set_mode(size)
 
 pygame.display.set_caption('Tetris')
@@ -218,14 +234,18 @@ while not done:
         for j in range(game.width):
             pygame.draw.rect(screen, GRAY, [game.x + game.zoom * j, game.y + game.zoom * i, game.zoom, game.zoom], 1)
             if game.field[i][j] > 0:
-                pygame.draw.rect(screen, colors[game.field[i][j]], [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom -2])
+                pygame.draw.rect(screen, colors[game.field[i][j]],
+                                 [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
 
     if game.figure is not None:
         for i in range(4):
             for j in range(4):
                 p = i * 4 + j
                 if p in game.figure.image():
-                    pygame.draw.rect(screen, colors[game.figure.color], [game.x + game.zoom * (j + game.figure.x) + 1, game.y + game.zoom * (i + game.figure.y) + 1, game.zoom - 2, game.zoom - 2])
+                    pygame.draw.rect(screen, colors[game.figure.color],
+                                     [game.x + game.zoom * (j + game.figure.x) + 1,
+                                      game.y + game.zoom * (i + game.figure.y) + 1,
+                                      game.zoom - 2, game.zoom - 2])
 
     font = pygame.font.SysFont('Calibri', 25, True, False)
     font1 = pygame.font.SysFont('Calibri', 65, True, False)
